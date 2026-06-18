@@ -1,6 +1,6 @@
 from pathlib import Path
 from dotenv import load_dotenv
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from argon2.low_level import hash_secret_raw, Type
 import base64
 import os
@@ -27,6 +27,25 @@ def derive_key(passphrase: bytes, salt: bytes) -> bytes:
 def lock_it():
     if not VAULT_PASSPHRASE:
         raise ValueError("VAULT_PASSPHRASE not found in .env file.")
+
+    if OUTPUT_FILE.exists():
+        existing_file = OUTPUT_FILE.read_bytes()
+        salt = existing_file[:16]
+        encrypted = existing_file[16:]
+
+        test_key = derive_key(VAULT_PASSPHRASE, salt)
+        test_fernet = Fernet(test_key)
+
+        try:
+            test_fernet.decrypt(encrypted)
+            print("✅ Passphrase matches. Overwriting vault with new content...")
+        except InvalidToken:
+            raise PermissionError(
+                f"\n❌ VAULT LOCKED!\n"
+                f"   The existing {OUTPUT_FILE} was created with a DIFFERENT passphrase.\n"
+                f"   To overwrite it, you must manually delete or rename the file first.\n"
+                f"   (This protects you from accidentally losing your data.)"
+            )
 
     salt = os.urandom(16)
     key = derive_key(VAULT_PASSPHRASE, salt)

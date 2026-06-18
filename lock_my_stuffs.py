@@ -4,9 +4,11 @@ from cryptography.fernet import Fernet, InvalidToken
 from argon2.low_level import hash_secret_raw, Type
 import base64
 import os
+import io
 
 load_dotenv()
 
+SEPARATOR = b"---80f8a4b0-0b4b-4623-ba12-0a711208f7b0---"
 VAULT_PASSPHRASE = os.getenv("VAULT_PASSPHRASE", "").encode()
 INPUT_DIR = Path("my_secrets")
 VAULT_DIR = Path("the_vault")
@@ -51,20 +53,21 @@ def lock_it():
     key = derive_key(VAULT_PASSPHRASE, salt)
     fernet = Fernet(key)
 
-    combined = b""
-    files = list(INPUT_DIR.rglob("*"))
+    buffer = io.BytesIO()
+    files = [
+        f for f in INPUT_DIR.rglob("*") if f.is_file()
+    ]
     for f in files:
-        if f.is_file():
-            content = f.read_bytes()
-            rel_path = f.relative_to(INPUT_DIR).as_posix()
-            combined += f"<<<{rel_path}>>>".encode() + content
+        rel_path = f.relative_to(INPUT_DIR).as_posix().encode()
+        buffer.write(SEPARATOR)
+        buffer.write(rel_path)
+        buffer.write(SEPARATOR)
+        buffer.write(f.read_bytes())
 
-    encrypted = fernet.encrypt(combined)
+    encrypted = fernet.encrypt(buffer.getvalue())
     OUTPUT_FILE.parent.mkdir(exist_ok=True)
     OUTPUT_FILE.write_bytes(salt + encrypted)
-
-    file_count = len([f for f in files if f.is_file()])
-    print(f"🔒 Encrypted {file_count} files → {OUTPUT_FILE}")
+    print(f"🔒 Encrypted {len(files)} files → {OUTPUT_FILE}")
 
 if __name__ == "__main__":
     lock_it()

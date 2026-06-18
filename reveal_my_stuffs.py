@@ -6,6 +6,7 @@ import base64
 import os
 
 load_dotenv()
+SEPARATOR = b"---80f8a4b0-0b4b-4623-ba12-0a711208f7b0---"
 VAULT_PASSPHRASE = os.getenv("VAULT_PASSPHRASE", "").encode()
 
 VAULT_FILE = Path("the_vault/master.vault")
@@ -38,17 +39,16 @@ def unlock_it():
 
     decrypted = _fernet.decrypt(encrypted)
 
-    parts = decrypted.split(b"<<<")
+    parts = decrypted.split(SEPARATOR)
     count = 0
+    for i in range(1, len(parts), 2):
+        name = parts[i].decode()
+        content = parts[i + 1]
 
-    for part in parts[1:]:
-
-        name, content = part.split(b">>>", 1)
-        file_path = OUTPUT_DIR / name.decode()
+        file_path = OUTPUT_DIR / name
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_bytes(content)
         count += 1
-
     print(f"🔓 Restored {count} files → {OUTPUT_DIR}/")
 
 

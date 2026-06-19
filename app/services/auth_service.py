@@ -1,4 +1,4 @@
-from fastapi import Response, Request, Depends, HTTPException, status
+from fastapi import Response, Request
 from datetime import timedelta
 from cachetools import TTLCache
 import secrets as __secrets
@@ -11,7 +11,7 @@ def generate_id():
 
 class AccessTokenService:
     max_age = int(timedelta(minutes=5).total_seconds())
-    test_max_age = 5
+    # test_max_age = 2
 
     def __init__(self, request: Request, response: Response):
         self.request = request
@@ -31,7 +31,7 @@ class AccessTokenService:
                 value=new_id,
                 httponly=True,
                 samesite="lax",
-                max_age=self.test_max_age,
+                max_age=self.max_age,
                 secure=False,
                 path="/"
             )
@@ -68,8 +68,8 @@ class AccessTokenService:
             raise e
 
 class RefreshTokenService:
-    max_age = int(timedelta(hours=2).total_seconds())
-    test_max_age = 20
+    max_age = int(timedelta(hours=1).total_seconds())
+    # test_max_age = 15
 
     def __init__(self, request: Request, response: Response):
         self.request = request
@@ -88,7 +88,7 @@ class RefreshTokenService:
                 value=new_id,
                 httponly=True,
                 samesite="strict",
-                max_age=self.test_max_age,
+                max_age=self.max_age,
                 secure=False,
                 path="/"
             )

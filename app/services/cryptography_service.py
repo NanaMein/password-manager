@@ -208,6 +208,7 @@ class EncryptFileService:
             self._create_canary_vault(passphrase, salt)
 
             self._create_master_vault(passphrase, salt)
+            return True
 
         except Exception as ex:
             raise ex

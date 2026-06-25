@@ -1,14 +1,12 @@
+import os
 from pathlib import Path
 from argon2.low_level import hash_secret_raw, Type
 from base64 import urlsafe_b64encode
 
 class ArgonDeriveService:
 
-    def get_key(self, passphrase: str | bytes, salt: bytes):
-
-        if isinstance(passphrase, str):
-            passphrase = bytes(passphrase, 'utf-8')
-
+    @staticmethod
+    def _derive_key(passphrase, salt):
         return urlsafe_b64encode(
             hash_secret_raw(
                 secret=passphrase,
@@ -20,6 +18,21 @@ class ArgonDeriveService:
                 type=Type.ID
             )
         )
+
+    def get_key(self, passphrase: str | bytes, salt: bytes):
+
+        if isinstance(passphrase, str):
+            passphrase = bytes(passphrase, 'utf-8')
+
+        return self._derive_key(passphrase, salt)
+
+    def get_key_and_salt(self, passphrase: str | bytes):
+        if isinstance(passphrase, str):
+            passphrase = bytes(passphrase, 'utf-8')
+
+        salt = os.urandom(16)
+        key = self._derive_key(passphrase, salt)
+        return key, salt
 
     def get_salt_and_token(self, file: Path):
         existing_file = file.read_bytes()

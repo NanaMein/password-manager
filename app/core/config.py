@@ -25,6 +25,8 @@ class Settings:
 
         self._validation_vault_file_name = os.getenv("validation_vault_file_name")
 
+        self._canary_vault_token = os.getenv("canary_vault_token")
+
 
     @property
     def separator(self):
@@ -55,6 +57,12 @@ class Settings:
         if not self._validation_vault_file_name:
             return self.secret_vault_storage / "default-validation.vault"
         return self.secret_vault_storage / self._validation_vault_file_name
+
+    @property
+    def canary_vault_token(self):
+        if not self._canary_vault_token:
+            return bytes("CANARY_VALID", "utf-8")
+        return bytes(self._canary_vault_token, "utf-8")
 
 
 def get_settings_instance():

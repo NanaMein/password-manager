@@ -3,7 +3,10 @@ from pathlib import Path
 from argon2.low_level import hash_secret_raw, Type
 from base64 import urlsafe_b64encode
 
-class ArgonDeriveService:
+
+
+
+class KeyDerivationService:
 
     @staticmethod
     def _derive_key(passphrase, salt):
@@ -34,9 +37,12 @@ class ArgonDeriveService:
         key = self._derive_key(passphrase, salt)
         return key, salt
 
-    def get_salt_and_token(self, file: Path):
-        existing_file = file.read_bytes()
+
+    def get_salt_and_token(self, file: Path | bytes):
+        if isinstance(file, Path):
+            file = file.read_bytes()
         salt_length = 16
-        salt =existing_file[:salt_length]
-        token = existing_file[salt_length:]
+        salt =file[:salt_length]
+        token = file[salt_length:]
         return salt, token
+

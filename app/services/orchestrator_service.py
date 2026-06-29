@@ -30,15 +30,10 @@ class OrchestratorService:
         return self.request.app.state.startup_status
 
     def check_passphrase_validity(self, passphrase: str) -> bool:
-        initial_validation = self.validation.check_canary_vault(passphrase)
-        if initial_validation:
-            return True
-
-        secondary_validation = self.unlock.check_vault_validity(passphrase)
-        if secondary_validation:
-            return True
-
-        return False
+        if not self.validation.check_canary_vault(passphrase):
+            if not self.unlock.check_vault_validity(passphrase):
+                return False
+        return True
 
     def save_my_files(self, passphrase):
         salt = self.lock.get_salt()
@@ -57,8 +52,6 @@ class OrchestratorService:
         return True
 
     def unlock_my_files(self, passphrase):
-        if not self.validation.check_canary_vault(passphrase):
-            if not self.unlock.check_vault_validity(passphrase):
-                return False
-
+        if not self.check_passphrase_validity(passphrase):
+            return False
         return self.unlock.unlock_files(passphrase=passphrase)

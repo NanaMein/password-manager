@@ -67,14 +67,18 @@ class StartupStateManagement:
         return self
 
     def user_status_update(self):
-        if self._startup_status.working_directory == "OLD" and self._startup_status.vault_directory == "OLD":
-            self._startup_status.initial_user_status = "EXISTING_USER"
+        vault_dir = self._startup_status.vault_directory
 
-        elif self._startup_status.working_directory == "NEW" and self._startup_status.vault_directory == "OLD":
-            self._startup_status.initial_user_status = "EXISTING_USER"
+        if vault_dir == "OLD":
+            user_stat = "EXISTING_USER"
+
+        elif vault_dir == "NEW":
+            user_stat = "NEW_USER"
 
         else:
-            self._startup_status.initial_user_status = "NEW_USER"
+            raise RuntimeError("User Error unknown")
+
+        self._startup_status.initial_user_status = user_stat
         return self
 
 

@@ -52,13 +52,18 @@ class StartupStateManagement:
         return self
 
     def vault_directory_status_update(self):
-        is_created = self._create_new_directory(file=self.settings.secret_vault_storage)
-        if is_created:
-            self._startup_status.vault_directory = "NEW"
+        secret_vault_path = self.settings.secret_vault_storage
 
+        if secret_vault_path.is_dir():
+            if any(secret_vault_path.iterdir()):
+                _status = "OLD"
+            else:
+                _status = "EMPTY"
         else:
-            self._startup_status.vault_directory = "OLD"
+            is_created = self._create_new_directory(file=secret_vault_path)
+            _status = "NEW" if is_created else "FAILED"
 
+        self._startup_status.vault_directory = _status
         return self
 
     def user_status_update(self):

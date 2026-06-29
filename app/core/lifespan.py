@@ -21,6 +21,86 @@ class StartupStatus(BaseModel):
 
 
 class StartupStateManagement:
+    def __init__(self):
+        self._original_status = None
+        self._updated_status = None
+        self.settings = get_settings_instance()
+
+
+    @property
+    def updated_status(self):
+        if self._updated_status is None:
+            _startup_object = StartupStatus()
+            self._original_status = _startup_object
+            self._updated_status = _startup_object.model_copy()
+        return self._updated_status
+
+    def generate_updated_status(self):
+        self.working_directory_status_update()
+        self.vault_directory_status_update()
+        self.user_status_update()
+        return self.updated_status
+
+    @staticmethod
+    def generate_updated_status_v1():
+        ssm = StartupStateManagement()
+        ssm.working_directory_status_update()
+        ssm.vault_directory_status_update()
+        ssm.user_status_update()
+        return ssm.updated_status
+
+    @staticmethod
+    def _create_new_directory(file: Path):
+        if not file.is_dir():
+            file.mkdir(parents=True, exist_ok=True)
+            test_file = file / ".write_test"
+            test_file.touch()
+            test_file.unlink()
+            return True
+        return False
+
+    def working_directory_status_update(self):
+        is_created = self._create_new_directory(file=self.settings.working_dir)
+        if is_created:
+            self.updated_status.working_directory = "NEW"
+
+        else:
+            self.updated_status.working_directory = "OLD"
+
+        return self
+
+    def vault_directory_status_update(self):
+        secret_vault_path = self.settings.secret_vault_storage
+
+        if secret_vault_path.is_dir():
+            if any(secret_vault_path.iterdir()):
+                _status = "OLD"
+            else:
+                _status = "EMPTY"
+        else:
+            is_created = self._create_new_directory(file=secret_vault_path)
+            _status = "NEW" if is_created else "FAILED"
+
+        self.updated_status.vault_directory = _status
+        return self
+
+    def user_status_update(self):
+        vault_dir = self.updated_status.vault_directory
+
+        if vault_dir == "OLD":
+            user_stat = "EXISTING_USER"
+
+        elif vault_dir == "NEW":
+            user_stat = "NEW_USER"
+
+        else:
+            raise RuntimeError("User Error unknown")
+
+        self.updated_status.initial_user_status = user_stat
+        return self
+
+
+class StartupStateManagementV1:
     def __init__(self, startup_status: StartupStatus):
         self._startup_status = startup_status
         self.settings = get_settings_instance()
@@ -113,10 +193,9 @@ async def lifespan(app: FastAPI):
     app.state.access_cache = time_to_live_cache(minutes=5)
     app.state.refresh_cache = time_to_live_cache(hours=2)
 
-
-    startup_status = StartupStatus()
-    updated_status = StartupStateManagement(startup_status)
-    app.state.startup_status = updated_status.generate_updated_status
+    _startup_status = StartupStateManagement().generate_updated_status()
+    app.state.startup_status = _startup_status
+    app_state.user_status = _startup_status.initial_user_status
 
 
     try:

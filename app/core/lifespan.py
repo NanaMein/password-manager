@@ -7,6 +7,7 @@ from app.core.config import get_settings_instance
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from pathlib import Path
+from app.core.state import app_state
 
 
 
